@@ -13,25 +13,16 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column (name = "id", nullable = false)
     private Long id;
-    @Column (name = "name", nullable = false)
     private String name;
-    @Column (name = "title", nullable = false)
     private String title;
-    @Column (name = "race", nullable = false)
     @Enumerated(EnumType.STRING)
     private Race race;
-    @Column (name = "profession", nullable = false)
     @Enumerated(EnumType.STRING)
     private Profession profession;
-    @Column (name = "experience", nullable = false)
     private Integer experience;
-    @Column (name = "level", nullable = false)
     private Integer level;
-    @Column (name = "untilNextLevel", nullable = false)
     private Integer untilNextLevel;
-    @Column (name = "birthday", nullable = false)
     private Date birthday;
-    @Column (name = "banned", nullable = false)
     private Boolean banned;
 
     public Player(String name, String title, Race race, Profession profession, Integer experience, Integer level, Integer untilNextLevel, Date birthday, Boolean banned) {

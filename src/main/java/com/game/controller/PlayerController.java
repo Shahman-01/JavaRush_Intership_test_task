@@ -5,6 +5,8 @@ import com.game.entity.Player;
 import com.game.entity.Profession;
 import com.game.entity.Race;
 import com.game.service.PlayerService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +61,83 @@ public class PlayerController {
     ) {
         return playerService.getAllPlayers(name, title, race, profession, after, before,
                 banned, minExperience, maxExperience, minLevel, maxLevel).size();
+    }
+
+    @RequestMapping(value = "/rest/players", method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
+        if (!playerService.isValid(player)) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        if (player.getBanned() == null) {
+            player.setBanned(false);
+        }
+
+        int level = playerService.calculateLevel(player.getExperience());
+        player.setLevel(level);
+
+        int untilNextLevel = playerService.
+                calculateExperienceUntilNextLevel(player.getLevel(), player.getExperience());
+        player.setUntilNextLevel(untilNextLevel);
+
+        Player newPlayer = playerService.createPlayer(player);
+
+        return new ResponseEntity<>(newPlayer, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "rest/players/{id}", method = RequestMethod.GET)
+    public ResponseEntity<Player> getPlayer(@PathVariable(value = "id") String pathId) {
+        Long id = null;
+        if (pathId != null) {
+            try {
+                id = Long.parseLong(pathId);
+            } catch (NumberFormatException e) {
+            }
+        }
+        if (id == null || id <= 0) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        Player player = playerService.getPlayer(id);
+
+        if (player == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(player, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "rest/players/{id}", method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity<Player> updatePlayer(@PathVariable(value = "id") String pathId,
+                                               @RequestBody Player player) {
+        ResponseEntity<Player> findPlayer = getPlayer(pathId);
+        Player oldPlayer = findPlayer.getBody();
+        if (oldPlayer == null)
+            return findPlayer;
+
+        Player newPlayer;
+
+        try {
+            newPlayer = playerService.updatePlayer(oldPlayer, player);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(newPlayer, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "rest/players/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity<Player> deletePlayer(@PathVariable(value = "id") String pathId) {
+        ResponseEntity<Player> findPlayer = getPlayer(pathId);
+        Player oldPlayer = findPlayer.getBody();
+
+        if (oldPlayer == null)
+            return findPlayer;
+        playerService.deletePlayer(oldPlayer);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }

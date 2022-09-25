@@ -39,10 +39,14 @@ public class PlayerController {
             @RequestParam(value = "pageNumber", required = false) Integer pageNumber,
             @RequestParam(value = "pageSize", required = false) Integer pageSize
     ) {
-        final List<Player> players = playerService.getAllPlayers(name, title, race, profession,
-                after, before, banned, minExperience, maxExperience, minLevel, maxLevel);
-        final List<Player> sortedPlayers = playerService.sortPlayers(players, order);
-        return playerService.getPage(sortedPlayers, pageNumber, pageSize);
+        final List<Player> playersList = playerService.getAllPlayers(
+                name, title, race, profession,
+                after, before, banned, minExperience,
+                maxExperience, minLevel, maxLevel);
+
+        final List<Player> sorted = playerService.sortPlayers(playersList, order);
+
+        return playerService.getPage(sorted, pageNumber, pageSize);
     }
 
     @RequestMapping(value = "/rest/players/count", method = RequestMethod.GET)
@@ -59,14 +63,16 @@ public class PlayerController {
             @RequestParam(value = "minLevel", required = false) Integer minLevel,
             @RequestParam(value = "maxLevel", required = false) Integer maxLevel
     ) {
-        return playerService.getAllPlayers(name, title, race, profession, after, before,
-                banned, minExperience, maxExperience, minLevel, maxLevel).size();
+        return playerService.getAllPlayers(
+                name, title, race, profession, after, before,
+                banned, minExperience, maxExperience, minLevel, maxLevel
+                ).size();
     }
 
     @RequestMapping(value = "/rest/players", method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
-        if (!playerService.isValid(player)) {
+        if (playerService.isValid(player) == false) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
@@ -78,25 +84,23 @@ public class PlayerController {
         player.setLevel(level);
 
         final int untilNextLevel = playerService.
-                calculateExperienceUntilNextLevel(player.getLevel(), player.getExperience());
+                calculateExpUntilNextLevel(player.getLevel(), player.getExperience());
+
         player.setUntilNextLevel(untilNextLevel);
 
-//        player.setUntilNextLevel(untilNextLevel);
-
-        final Player newPlayer = playerService.createPlayer(player);
+        final Player newPlayer = playerService.createNewPlayer(player);
 
         return new ResponseEntity<>(newPlayer, HttpStatus.OK);
     }
 
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.GET)
-    public ResponseEntity<Player> getPlayer(@PathVariable(value = "id") String pathId) {
-        final Long id = toLong(pathId);
+    public ResponseEntity<Player> getPlayer(@PathVariable(value = "id") String getId) {
+        final Long id = toLong(getId);
         if (id == null || id <= 0) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
         final Player player = playerService.getPlayer(id);
-
         if (player == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -104,12 +108,11 @@ public class PlayerController {
         return new ResponseEntity<>(player, HttpStatus.OK);
     }
 
-    private Long toLong(String pathId) {
-        if (pathId != null) {
+    private Long toLong(String getId) {
+        if (getId != null) {
             try {
-                return Long.parseLong(pathId);
-            } catch (NumberFormatException ignored) {
-
+                return Long.parseLong(getId);
+            } catch (NumberFormatException e) {
             }
         }
         return null;
@@ -117,15 +120,14 @@ public class PlayerController {
 
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity<Player> updatePlayer(@PathVariable(value = "id") String pathId,
+    public ResponseEntity<Player> updatePlayer(@PathVariable(value = "id") String getId,
                                                @RequestBody Player player) {
-        final ResponseEntity<Player> findPlayer = getPlayer(pathId);
+        final ResponseEntity<Player> findPlayer = getPlayer(getId);
         final Player oldPlayer = findPlayer.getBody();
         if (oldPlayer == null)
             return findPlayer;
 
         final Player newPlayer;
-
         try {
             newPlayer = playerService.updatePlayer(oldPlayer, player);
         } catch (IllegalArgumentException e) {
@@ -136,15 +138,14 @@ public class PlayerController {
     }
 
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.DELETE)
-    public ResponseEntity<Player> deletePlayer(@PathVariable(value = "id") String pathId) {
-        final ResponseEntity<Player> findPlayer = getPlayer(pathId);
-        final Player oldPlayer = findPlayer.getBody();
+    public ResponseEntity<Player> deletePlayer(@PathVariable(value = "id") String getId) {
+        final ResponseEntity<Player> getPlayer = getPlayer(getId);
+        final Player oldPlayer = getPlayer.getBody();
 
         if (oldPlayer == null)
-            return findPlayer;
+            return getPlayer;
         playerService.deletePlayer(oldPlayer);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 }

@@ -22,29 +22,41 @@ public class PlayerService {
 
     @Autowired
     public PlayerService(PlayerRepository repository) {
-        super();
         this.repository = repository;
     }
 
-    public List<Player> getAllPlayers(String name, String title, Race race, Profession profession,
-                                      Long after, Long before, Boolean banned, Integer minExperience,
-                                      Integer maxExperience, Integer minLevel, Integer maxLevel) {
+    public List<Player> getAllPlayers(
+            String name, String title, Race race, Profession profession,
+            Long after, Long before, Boolean banned, Integer minExperience,
+            Integer maxExperience, Integer minLevel, Integer maxLevel) {
+
         final Date afterDate = after == null ? null : new Date(after);
         final Date beforeDate = before == null ? null : new Date(before);
 
         final List<Player> players = new ArrayList<>();
         repository.findAll().forEach(player -> {
-            if (name != null && !player.getName().contains(name)) return;
-            if (title != null && !player.getTitle().contains(title)) return;
-            if (race != null && player.getRace() != race) return;
-            if (profession != null && player.getProfession() != profession) return;
-            if (after != null && player.getBirthday().before(afterDate)) return;
-            if (before != null && player.getBirthday().after(beforeDate)) return;
-            if (banned != null && player.getBanned().booleanValue() != banned.booleanValue()) return;
-            if (minExperience != null && player.getExperience().compareTo(minExperience) < 0) return;
-            if (maxExperience != null && player.getExperience().compareTo(maxExperience) > 0) return;
-            if (minLevel != null && player.getLevel().compareTo(minLevel) < 0) return;
-            if (maxLevel != null && player.getLevel().compareTo(maxLevel) > 0) return;
+            if (name != null && !player.getName().contains(name))
+                return;
+            if (title != null && !player.getTitle().contains(title))
+                return;
+            if (race != null && player.getRace() != race)
+                return;
+            if (profession != null && player.getProfession() != profession)
+                return;
+            if (after != null && player.getBirthday().before(afterDate))
+                return;
+            if (before != null && player.getBirthday().after(beforeDate))
+                return;
+            if (banned != null && player.getBanned().booleanValue() != banned.booleanValue())
+                return;
+            if (minExperience != null && player.getExperience().compareTo(minExperience) < 0)
+                return;
+            if (maxExperience != null && player.getExperience().compareTo(maxExperience) > 0)
+                return;
+            if (minLevel != null && player.getLevel().compareTo(minLevel) < 0)
+                return;
+            if (maxLevel != null && player.getLevel().compareTo(maxLevel) > 0)
+                return;
             players.add(player);
         });
 
@@ -54,18 +66,18 @@ public class PlayerService {
 
     public List<Player> sortPlayers(List<Player> players, PlayerOrder order) {
         if (order != null) {
-            players.sort((playerOne, playerTwo) -> {
+            players.sort((firstPlayer, secondPlayer) -> {
                 switch (order) {
                     case ID:
-                        return Long.compare(playerOne.getId(), playerTwo.getId());
+                        return Long.compare(firstPlayer.getId(), secondPlayer.getId());
                     case NAME:
-                        return playerOne.getName().compareTo(playerTwo.getName());
-                    case LEVEL:
-                        return Integer.compare(playerOne.getLevel(), playerTwo.getLevel());
-                    case BIRTHDAY:
-                        return playerOne.getBirthday().compareTo(playerTwo.getBirthday());
+                        return firstPlayer.getName().compareTo(secondPlayer.getName());
                     case EXPERIENCE:
-                        return Integer.compare(playerOne.getExperience(), playerTwo.getExperience());
+                        return Integer.compare(firstPlayer.getExperience(), secondPlayer.getExperience());
+                    case BIRTHDAY:
+                        return firstPlayer.getBirthday().compareTo(secondPlayer.getBirthday());
+                    case LEVEL:
+                        return Integer.compare(firstPlayer.getLevel(), secondPlayer.getLevel());
                     default:
                         return 0;
                 }
@@ -74,7 +86,7 @@ public class PlayerService {
         return players;
     }
 
-    public Player createPlayer(Player player) {
+    public Player createNewPlayer(Player player) {
         return repository.save(player);
     }
 
@@ -85,9 +97,8 @@ public class PlayerService {
             oldPlayer.setRace(newPlayer.getRace());
         }
 
-        if (newPlayer.getProfession() != null) {
+        if (newPlayer.getProfession() != null)
             oldPlayer.setProfession(newPlayer.getProfession());
-        }
 
         final String name = newPlayer.getName();
         if (name != null) {
@@ -116,7 +127,7 @@ public class PlayerService {
 
         final Integer experience = newPlayer.getExperience();
         if (experience != null) {
-            if (isExperienceValid(experience)) {
+            if (isExpValid(experience)) {
                 oldPlayer.setExperience(experience);
                 isPossiblePlayerUpdate = true;
                 oldPlayer.setLevel(calculateLevel(experience));
@@ -130,9 +141,10 @@ public class PlayerService {
         }
 
         if (isPossiblePlayerUpdate) {
-            final int experienceUntilNextLevel =
-                    calculateExperienceUntilNextLevel(oldPlayer.getLevel(), oldPlayer.getExperience());
-            oldPlayer.setUntilNextLevel(experienceUntilNextLevel);
+            final int expUntilNextLevel = calculateExpUntilNextLevel(
+                    oldPlayer.getLevel(), oldPlayer.getExperience());
+
+            oldPlayer.setUntilNextLevel(expUntilNextLevel);
         }
 
         repository.save(oldPlayer);
@@ -145,17 +157,20 @@ public class PlayerService {
     }
 
     public boolean isValid(Player player) {
-        return player != null && isNameValid(player.getName()) && isTitleValid(player.getTitle())
-                && isExperienceValid(player.getExperience()) && isBirthdayValid(player.getBirthday());
+        return (player != null &&
+                isNameValid(player.getName()) &&
+                isTitleValid(player.getTitle()) &&
+                isExpValid(player.getExperience()) &&
+                isBirthdayValid(player.getBirthday()));
     }
 
 
     public int calculateLevel(Integer experience) {
-        return (int) (Math.sqrt(2500 + 200 * experience) - 50) / 100;
+        return ((int) (Math.sqrt(2500 + 200 * experience) - 50) / 100);
     }
 
-    public int calculateExperienceUntilNextLevel(Integer level, Integer experience) {
-        return 50 * (level + 1) * (level + 2) - experience;
+    public int calculateExpUntilNextLevel(Integer level, Integer experience) {
+        return (50 * (level + 1) * (level + 2) - experience);
     }
 
     public Player getPlayer(Long id) {
@@ -164,30 +179,30 @@ public class PlayerService {
 
     private boolean isNameValid(String name) {
         final int maxNameLength = 12;
-        return name != null && !name.isEmpty() && name.length() <= maxNameLength;
+        return (name != null && !name.isEmpty() && name.length() <= maxNameLength);
     }
 
     private boolean isTitleValid(String title) {
         final int maxTitleLength = 30;
-        return title != null && !title.isEmpty() && title.length() <= maxTitleLength;
-    }
-
-    private boolean isExperienceValid(Integer exp) {
-        final int minExp = 0;
-        final int maxExp = 10_000_000;
-        return exp != null && exp.compareTo(minExp) >= 0 && exp.compareTo(maxExp) <= 0;
-    }
-
-    private boolean isBirthdayValid(Date birthday) {
-        final Date startYear = getDateFromYear(2000);
-        final Date endYear = getDateFromYear(3000); //Дата регистрации (от 2000 до 3000 года включительно)
-        return birthday != null && birthday.after(startYear) && birthday.before(endYear);
+        return (title != null && !title.isEmpty() && title.length() <= maxTitleLength);
     }
 
     private Date getDateFromYear(int year) {
         final Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.YEAR, year);
         return calendar.getTime();
+    }
+
+    private boolean isBirthdayValid(Date birthday) {
+        final Date startYear = getDateFromYear(2000);
+        final Date endYear = getDateFromYear(3000);
+        return (birthday != null && birthday.after(startYear) && birthday.before(endYear));
+    }
+
+    private boolean isExpValid(Integer exp) {
+        final int minExp = 0;
+        final int maxExp = 10_000_000;
+        return (exp != null && exp.compareTo(minExp) >= 0 && exp.compareTo(maxExp) <= 0);
     }
 
     public List<Player> getPage(List<Player> players, Integer pageNumber, Integer pageSize) {

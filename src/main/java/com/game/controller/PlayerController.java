@@ -39,9 +39,9 @@ public class PlayerController {
             @RequestParam(value = "pageNumber", required = false) Integer pageNumber,
             @RequestParam(value = "pageSize", required = false) Integer pageSize
     ) {
-        List<Player> players = playerService.getAllPlayers(name, title, race, profession,
+        final List<Player> players = playerService.getAllPlayers(name, title, race, profession,
                 after, before, banned, minExperience, maxExperience, minLevel, maxLevel);
-        List<Player> sortedPlayers = playerService.sortPlayers(players, order);
+        final List<Player> sortedPlayers = playerService.sortPlayers(players, order);
         return playerService.getPage(sortedPlayers, pageNumber, pageSize);
     }
 
@@ -74,32 +74,28 @@ public class PlayerController {
             player.setBanned(false);
         }
 
-        int level = playerService.calculateLevel(player.getExperience());
+        final int level = playerService.calculateLevel(player.getExperience());
         player.setLevel(level);
 
-        int untilNextLevel = playerService.
+        final int untilNextLevel = playerService.
                 calculateExperienceUntilNextLevel(player.getLevel(), player.getExperience());
         player.setUntilNextLevel(untilNextLevel);
 
-        Player newPlayer = playerService.createPlayer(player);
+//        player.setUntilNextLevel(untilNextLevel);
+
+        final Player newPlayer = playerService.createPlayer(player);
 
         return new ResponseEntity<>(newPlayer, HttpStatus.OK);
     }
 
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.GET)
     public ResponseEntity<Player> getPlayer(@PathVariable(value = "id") String pathId) {
-        Long id = null;
-        if (pathId != null) {
-            try {
-                id = Long.parseLong(pathId);
-            } catch (NumberFormatException e) {
-            }
-        }
+        final Long id = toLong(pathId);
         if (id == null || id <= 0) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
-        Player player = playerService.getPlayer(id);
+        final Player player = playerService.getPlayer(id);
 
         if (player == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -108,16 +104,27 @@ public class PlayerController {
         return new ResponseEntity<>(player, HttpStatus.OK);
     }
 
+    private Long toLong(String pathId) {
+        if (pathId != null) {
+            try {
+                return Long.parseLong(pathId);
+            } catch (NumberFormatException ignored) {
+
+            }
+        }
+        return null;
+    }
+
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity<Player> updatePlayer(@PathVariable(value = "id") String pathId,
                                                @RequestBody Player player) {
-        ResponseEntity<Player> findPlayer = getPlayer(pathId);
-        Player oldPlayer = findPlayer.getBody();
+        final ResponseEntity<Player> findPlayer = getPlayer(pathId);
+        final Player oldPlayer = findPlayer.getBody();
         if (oldPlayer == null)
             return findPlayer;
 
-        Player newPlayer;
+        final Player newPlayer;
 
         try {
             newPlayer = playerService.updatePlayer(oldPlayer, player);
@@ -130,8 +137,8 @@ public class PlayerController {
 
     @RequestMapping(value = "rest/players/{id}", method = RequestMethod.DELETE)
     public ResponseEntity<Player> deletePlayer(@PathVariable(value = "id") String pathId) {
-        ResponseEntity<Player> findPlayer = getPlayer(pathId);
-        Player oldPlayer = findPlayer.getBody();
+        final ResponseEntity<Player> findPlayer = getPlayer(pathId);
+        final Player oldPlayer = findPlayer.getBody();
 
         if (oldPlayer == null)
             return findPlayer;

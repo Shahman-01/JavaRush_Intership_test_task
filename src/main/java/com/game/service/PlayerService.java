@@ -7,8 +7,8 @@ import com.game.entity.Race;
 import com.game.repository.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -18,7 +18,7 @@ import java.util.List;
 @Transactional
 public class PlayerService {
 
-    private PlayerRepository repository;
+    private final PlayerRepository repository;
 
     @Autowired
     public PlayerService(PlayerRepository repository) {
@@ -51,29 +51,27 @@ public class PlayerService {
         return players;
     }
 
+
     public List<Player> sortPlayers(List<Player> players, PlayerOrder order) {
         if (order != null) {
-            players.sort((firstPlayer, secondPlayer) -> {
+            players.sort((playerOne, playerTwo) -> {
                 switch (order) {
                     case ID:
-                        return Long.compare(firstPlayer.getId(), secondPlayer.getId());
+                        return Long.compare(playerOne.getId(), playerTwo.getId());
                     case NAME:
-                        return firstPlayer.getName().compareTo(secondPlayer.getName());
+                        return playerOne.getName().compareTo(playerTwo.getName());
                     case LEVEL:
-                        return Integer.compare(firstPlayer.getLevel(), secondPlayer.getLevel());
+                        return Integer.compare(playerOne.getLevel(), playerTwo.getLevel());
                     case BIRTHDAY:
-                        return firstPlayer.getBirthday().compareTo(secondPlayer.getBirthday());
+                        return playerOne.getBirthday().compareTo(playerTwo.getBirthday());
                     case EXPERIENCE:
-                        return Integer.compare(firstPlayer.getExperience(), secondPlayer.getExperience());
+                        return Integer.compare(playerOne.getExperience(), playerTwo.getExperience());
                     default:
                         return 0;
-
                 }
             });
-            return players;
         }
-
-        return null;
+        return players;
     }
 
     public Player createPlayer(Player player) {
@@ -83,24 +81,6 @@ public class PlayerService {
     public Player updatePlayer(Player oldPlayer, Player newPlayer) throws IllegalArgumentException {
         boolean isPossiblePlayerUpdate = false;
 
-        final String name = newPlayer.getName();
-        if (name != null) {
-            if (isNameValid(name)) {
-                oldPlayer.setName(name);
-            } else {
-                throw new IllegalArgumentException();
-            }
-        }
-
-        final String title = newPlayer.getTitle();
-        if (title != null) {
-            if (isTitleValid(title)) {
-                oldPlayer.setTitle(title);
-            } else {
-                throw new IllegalArgumentException();
-            }
-        }
-
         if (newPlayer.getRace() != null) {
             oldPlayer.setRace(newPlayer.getRace());
         }
@@ -109,15 +89,20 @@ public class PlayerService {
             oldPlayer.setProfession(newPlayer.getProfession());
         }
 
-        final Integer experience = newPlayer.getExperience();
-        if (experience != null) {
-            if (isExperienceValid(experience)) {
-                oldPlayer.setExperience(experience);
-                isPossiblePlayerUpdate = true;
-                oldPlayer.setLevel(calculateLevel(experience));
-            } else {
+        final String name = newPlayer.getName();
+        if (name != null) {
+            if (isNameValid(name))
+                oldPlayer.setName(name);
+            else
                 throw new IllegalArgumentException();
-            }
+        }
+
+        final String title = newPlayer.getTitle();
+        if (title != null) {
+            if (isTitleValid(title))
+                oldPlayer.setTitle(title);
+            else
+                throw new IllegalArgumentException();
         }
 
         Date birthday = newPlayer.getBirthday();
@@ -125,9 +110,18 @@ public class PlayerService {
             if (isBirthdayValid(birthday)) {
                 oldPlayer.setBirthday(birthday);
                 isPossiblePlayerUpdate = true;
-            } else {
+            } else
                 throw new IllegalArgumentException();
-            }
+        }
+
+        final Integer experience = newPlayer.getExperience();
+        if (experience != null) {
+            if (isExperienceValid(experience)) {
+                oldPlayer.setExperience(experience);
+                isPossiblePlayerUpdate = true;
+                oldPlayer.setLevel(calculateLevel(experience));
+            } else
+                throw new IllegalArgumentException();
         }
 
         if (newPlayer.getBanned() != null) {
@@ -136,34 +130,46 @@ public class PlayerService {
         }
 
         if (isPossiblePlayerUpdate) {
-            final int experienceUntilNextLevel = calculateExperienceUntilNextLevel(oldPlayer.getLevel(),
-                                                 oldPlayer.getExperience());
+            final int experienceUntilNextLevel =
+                    calculateExperienceUntilNextLevel(oldPlayer.getLevel(), oldPlayer.getExperience());
             oldPlayer.setUntilNextLevel(experienceUntilNextLevel);
         }
 
         repository.save(oldPlayer);
         return oldPlayer;
+
     }
 
     public void deletePlayer(Player player) {
         repository.delete(player);
     }
 
+    public boolean isValid(Player player) {
+        return player != null && isNameValid(player.getName()) && isTitleValid(player.getTitle())
+                && isExperienceValid(player.getExperience()) && isBirthdayValid(player.getBirthday());
+    }
+
+
+    public int calculateLevel(Integer experience) {
+        return (int) (Math.sqrt(2500 + 200 * experience) - 50) / 100;
+    }
+
+    public int calculateExperienceUntilNextLevel(Integer level, Integer experience) {
+        return 50 * (level + 1) * (level + 2) - experience;
+    }
+
     public Player getPlayer(Long id) {
         return repository.findById(id).orElse(null);
     }
 
-    public boolean isValid(Player player) {
-        return player != null && isNameValid(player.getName()) && isTitleValid(player.getTitle())
-                && isBirthdayValid(player.getBirthday()) && isExperienceValid(player.getExperience());
-    }
-
     private boolean isNameValid(String name) {
-        return name != null && !name.isEmpty() && name.length() <= 12;
+        final int maxNameLength = 12;
+        return name != null && !name.isEmpty() && name.length() <= maxNameLength;
     }
 
     private boolean isTitleValid(String title) {
-        return title != null && !title.isEmpty() && title.length() <= 30;
+        final int maxTitleLength = 30;
+        return title != null && !title.isEmpty() && title.length() <= maxTitleLength;
     }
 
     private boolean isExperienceValid(Integer exp) {
@@ -172,12 +178,10 @@ public class PlayerService {
         return exp != null && exp.compareTo(minExp) >= 0 && exp.compareTo(maxExp) <= 0;
     }
 
-    public int calculateLevel(Integer experience) {
-        return (int) (Math.sqrt(2500 + 200 * experience) - 50) / 100;
-    }
-
     private boolean isBirthdayValid(Date birthday) {
-        return birthday != null && birthday.after(getDateFromYear(2000)) && birthday.before(getDateFromYear(3000));
+        final Date startYear = getDateFromYear(2000);
+        final Date endYear = getDateFromYear(3000); //Дата регистрации (от 2000 до 3000 года включительно)
+        return birthday != null && birthday.after(startYear) && birthday.before(endYear);
     }
 
     private Date getDateFromYear(int year) {
@@ -186,22 +190,17 @@ public class PlayerService {
         return calendar.getTime();
     }
 
-    public int calculateExperienceUntilNextLevel(Integer level, Integer experience) {
-        return 50 * (level + 1) * (level + 2) - experience;
-    }
-
     public List<Player> getPage(List<Player> players, Integer pageNumber, Integer pageSize) {
         final int page = pageNumber == null ? 0 : pageNumber;
         final int size = pageSize == null ? 3 : pageSize;
-
         final int start = page * size;
 
-        int finish = start * size;
+        int end = start + size;
 
-        if (finish > players.size()) {
-            finish = players.size();
+        if (end > players.size()) {
+            end = players.size();
         }
 
-        return players.subList(start, finish);
+        return players.subList(start, end);
     }
 }

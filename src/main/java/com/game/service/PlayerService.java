@@ -193,16 +193,16 @@ public class PlayerService {
         return calendar.getTime();
     }
 
+    private boolean isExpValid(Integer exp) {
+        final int minExp = 0;
+        final int maxExp = 10000000;
+        return (exp != null && exp.compareTo(minExp) >= 0 && exp.compareTo(maxExp) <= 0);
+    }
+
     private boolean isBirthdayValid(Date birthday) {
         final Date startYear = getDateFromYear(2000);
         final Date endYear = getDateFromYear(3000);
         return (birthday != null && birthday.after(startYear) && birthday.before(endYear));
-    }
-
-    private boolean isExpValid(Integer exp) {
-        final int minExp = 0;
-        final int maxExp = 10_000_000;
-        return (exp != null && exp.compareTo(minExp) >= 0 && exp.compareTo(maxExp) <= 0);
     }
 
     public List<Player> getPage(List<Player> players, Integer pageNumber, Integer pageSize) {
